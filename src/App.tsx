@@ -603,10 +603,13 @@ export default function App() {
       // 1. Refresh general reports list
       try {
         const res = await fetch("/api/reports");
-        const data = await res.json();
-        setReports(data);
+        if (res.ok) {
+          const data = await res.json();
+          setReports(data);
+        }
       } catch (err) {
-        console.error("Error refreshing reports list:", err);
+        // Soft warning for background refresh network issues
+        console.warn("Background reports refresh deferred:", err);
       }
 
       // 2. Refresh active tracked report (if any)
@@ -618,7 +621,8 @@ export default function App() {
             setTrackedReport(data);
           }
         } catch (err) {
-          console.error("Error refreshing tracked report on focus:", err);
+          // Soft warning for background refresh network issues
+          console.warn("Background tracked report refresh deferred:", err);
         }
       }
     };
