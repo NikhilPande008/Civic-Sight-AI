@@ -200,6 +200,51 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 }
 
+export enum ReportStatus {
+  Reported = "Reported",
+  Acknowledged = "Acknowledged",
+  InProgress = "In Progress",
+  Resolved = "Resolved",
+  Escalated = "escalated",
+  Duplicate = "duplicate"
+}
+
+export function matchStatus(reportStatus: string | undefined, filterType: string): boolean {
+  if (!reportStatus) return false;
+  const s = reportStatus.toLowerCase().trim();
+  const f = filterType.toLowerCase().trim();
+
+  if (f === "all" || f === "all statuses") {
+    return true;
+  }
+  
+  if (f === "reported") {
+    return s === "reported" || s === "triaged" || s === "pending";
+  }
+  
+  if (f === "acknowledged") {
+    return s === "acknowledged";
+  }
+  
+  if (f === "in progress" || f === "inprogress") {
+    return s === "in progress" || s === "inprogress";
+  }
+  
+  if (f === "resolved") {
+    return s === "resolved";
+  }
+  
+  if (f === "needs review" || f === "escalated") {
+    return s === "escalated";
+  }
+  
+  if (f === "duplicate") {
+    return s === "duplicate";
+  }
+  
+  return s === f;
+}
+
 export default function App() {
   const [uiLanguage, setUiLanguage] = useState<string>("en");
 
@@ -1136,15 +1181,15 @@ export default function App() {
 
   // Filtered reports list
   const filteredReports = reports.filter(r => {
-    if (activeTab === "active") return r.status !== "resolved";
-    if (activeTab === "resolved") return r.status === "resolved";
-    if (activeTab === "escalated") return r.status === "escalated";
+    if (activeTab === "active") return !matchStatus(r.status, "Resolved");
+    if (activeTab === "resolved") return matchStatus(r.status, "Resolved");
+    if (activeTab === "escalated") return matchStatus(r.status, "Needs Review");
     return true;
   });
 
   const hotspot = useMemo(() => {
     const activeReports = reports.filter(
-      r => r.status !== "resolved" && r.status !== "duplicate" && r.latitude != null && r.longitude != null
+      r => !matchStatus(r.status, "Resolved") && !matchStatus(r.status, "duplicate") && r.latitude != null && r.longitude != null
     );
     if (activeReports.length < 2) return null;
 
@@ -1329,18 +1374,10 @@ export default function App() {
     let queueReports = deptReports.filter(r => {
       // 1. Status Filter
       if (municipalStatusFilter !== "all") {
-        if (municipalStatusFilter === "Needs Review") {
-          if (r.status !== "escalated") return false;
-        } else if (municipalStatusFilter === "Reported") {
-          if (r.status !== "reported" && r.status !== "triaged" && r.status !== "pending") return false;
-        } else if (municipalStatusFilter === "In Progress") {
-          if (r.status !== "in progress" && r.status !== "inprogress") return false;
-        } else {
-          if (r.status?.toLowerCase() !== municipalStatusFilter.toLowerCase()) return false;
-        }
+        if (!matchStatus(r.status, municipalStatusFilter)) return false;
       } else {
         // Default: hide duplicate reports to avoid clutter unless requested explicitly
-        if (r.status === "duplicate") return false;
+        if (matchStatus(r.status, "duplicate")) return false;
       }
 
       // 2. Category Filter
