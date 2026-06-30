@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "Report": {
+      "title": "Report",
+      "description": "Civic report submitted by a citizen",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "rawLocation": {
+          "type": "string"
+        },
+        "imageUrl": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "triaged",
+            "duplicate",
+            "escalated",
+            "resolved"
+          ]
+        },
+        "issueType": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "formattedAddress": {
+          "type": "string"
+        },
+        "severityScore": {
+          "type": "number"
+        },
+        "assignedDepartment": {
+          "type": "string"
+        },
+        "citizenUpdate": {
+          "type": "string"
+        },
+        "duplicateOf": {
+          "type": "string"
+        },
+        "escalationReason": {
+          "type": "string"
+        },
+        "agentSummary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "rawLocation",
+        "imageUrl",
+        "language",
+        "createdAt",
+        "status"
+      ]
+    }
+  },
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Collection of civic reports submitted by citizens"
+    }
+  }
+}

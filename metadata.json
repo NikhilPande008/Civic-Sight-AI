@@ -1,0 +1,6 @@
+{
+  "name": "CivicSight AI",
+  "description": "Autonomous civic-issue triage agent using Gemini function calling to analyze images, geocode, check duplicates, and route issues.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

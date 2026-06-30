@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net - deny all direct client-side read/write access.
+    // The server uses the Node.js Firestore Admin SDK, which bypasses these rules.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
