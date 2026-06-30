@@ -1865,9 +1865,11 @@ app.post("/api/reports/triage", rateLimitMiddleware, async (req, res) => {
   const isStreaming = req.query.stream === "true" || req.headers.accept === "text/event-stream";
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  const hasCoordinates = lat !== undefined && lat !== null && lat !== "" && lng !== undefined && lng !== null && lng !== "";
+
   // 1. Basic Presence Validation
-  if (!rawLocation || !image || !language) {
-    const errMsg = "Missing required fields: rawLocation, image, or language.";
+  if (!image || !language || (!hasCoordinates && !rawLocation)) {
+    const errMsg = "Missing required fields: image, language, or location details.";
     if (isStreaming) {
       res.writeHead(400, {
         "Content-Type": "text/event-stream",
@@ -1883,19 +1885,30 @@ app.post("/api/reports/triage", rateLimitMiddleware, async (req, res) => {
   }
 
   // 2. String & Length Validations (< 500 characters to prevent buffer overflow/DoS/abuse)
-  if (typeof rawLocation !== "string" || rawLocation.trim().length === 0) {
-    const errMsg = "rawLocation must be a non-empty string.";
-    if (isStreaming) {
-      res.writeHead(400, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
-      res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
-      res.end();
-      return;
+  const isRawLocProvided = rawLocation !== undefined && rawLocation !== null && rawLocation !== "";
+  if (isRawLocProvided) {
+    if (typeof rawLocation !== "string") {
+      const errMsg = "rawLocation must be a string.";
+      if (isStreaming) {
+        res.writeHead(400, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+        res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
+        res.end();
+        return;
+      }
+      return res.status(400).json({ error: errMsg });
     }
-    return res.status(400).json({ error: errMsg });
-  }
-
-  if (rawLocation.length > 500) {
-    const errMsg = "rawLocation exceeds the limit of 500 characters.";
+    if (rawLocation.length > 500) {
+      const errMsg = "rawLocation exceeds the limit of 500 characters.";
+      if (isStreaming) {
+        res.writeHead(400, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
+        res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);
+        res.end();
+        return;
+      }
+      return res.status(400).json({ error: errMsg });
+    }
+  } else if (!hasCoordinates) {
+    const errMsg = "rawLocation must be a non-empty string when coordinates are not provided.";
     if (isStreaming) {
       res.writeHead(400, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
       res.write(`data: ${JSON.stringify({ error: errMsg })}\n\n`);

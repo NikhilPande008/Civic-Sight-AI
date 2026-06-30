@@ -724,11 +724,43 @@ export default function App() {
 
   const handleSubmitTriage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rawLocation.trim()) return;
+    const isImageProvided = useCustomImage && !!customImage;
+    const isLocationProvided = hasValidKey
+      ? (usePinnedLocation ? !!pinPosition : !!rawLocation.trim())
+      : !!rawLocation.trim();
 
-    if (useCustomImage && !customImage) {
-      showToast("Please upload a real photo or choose a Demo Sample Preset below.", "warning");
+    if (!isImageProvided) {
+      showToast(
+        uiLanguage === "mr" 
+          ? "तक्रार सबमिट करण्यासाठी कृपया आपला स्वतःचा फोटो अपलोड करा." 
+          : uiLanguage === "hi" 
+            ? "शिकायत सबमिट करने के लिए कृपया अपनी फोटो अपलोड करें।" 
+            : "Please change the image manually by uploading a real photo before submitting.",
+        "warning"
+      );
       return;
+    }
+
+    if (!isLocationProvided) {
+      if (hasValidKey) {
+        showToast("Please pin the exact location on the map.", "warning");
+      } else {
+        showToast("Please provide a landmark/location description as map pinning is offline.", "warning");
+      }
+      return;
+    }
+
+    // Ask if they are sure of the location if it was not updated (matches preset location)
+    const preset = selectedPresetId ? PRESETS.find(p => p.id === selectedPresetId) : null;
+    if (preset && rawLocation.trim() === preset.rawLocation.trim() && !pinPosition) {
+      const confirmLoc = window.confirm(
+        uiLanguage === "mr" 
+          ? "आपण स्थान बदललेले नाही. आपण या स्थानाची खात्री बाळगता का?" 
+          : uiLanguage === "hi" 
+            ? "आपने स्थान अपडेट नहीं किया है। क्या आप इस स्थान के बारे में सुनिश्चित हैं?" 
+            : "You have not updated the location. Are you sure of this location?"
+      );
+      if (!confirmLoc) return;
     }
 
     setLoading(true);
@@ -737,18 +769,7 @@ export default function App() {
     setLiveSteps([]); // clear previous steps
     
     // Determine image input
-    let imageToSend = "";
-    if (useCustomImage && customImage) {
-      imageToSend = customImage;
-    } else {
-      // Special handle for conflict preset override
-      const preset = PRESETS.find(p => p.id === selectedPresetId);
-      if (preset?.id === "conflict_preset") {
-        imageToSend = "water_preset"; // Conflict!
-      } else {
-        imageToSend = selectedPresetId;
-      }
-    }
+    const imageToSend = customImage;
 
     // Determine location inputs
     const lat = usePinnedLocation && pinPosition ? pinPosition.lat : undefined;
@@ -2841,7 +2862,12 @@ export default function App() {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    disabled={loading || !rawLocation.trim()}
+                    disabled={
+                      loading ||
+                      !useCustomImage ||
+                      !customImage ||
+                      !(hasValidKey ? (usePinnedLocation ? !!pinPosition : !!rawLocation.trim()) : !!rawLocation.trim())
+                    }
                     className="w-full py-3 bg-slate-900 hover:bg-slate-850 text-white rounded-xl text-sm font-bold tracking-tight transition shadow-md hover:shadow-lg disabled:bg-slate-300 disabled:shadow-none flex items-center justify-center gap-2 cursor-pointer"
                     id="btn_submit_triage"
                   >
