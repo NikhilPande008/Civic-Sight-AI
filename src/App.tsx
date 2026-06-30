@@ -487,7 +487,14 @@ export default function App() {
   const [citizenTab, setCitizenTab] = useState<"report" | "browse">("report");
   const [citizenSubView, setCitizenSubView] = useState<"submit" | "track">("submit");
   const [searchTrackId, setSearchTrackId] = useState<string>("");
-  const [trackedReport, setTrackedReport] = useState<Report | null>(null);
+  const [trackedReportState, setTrackedReportState] = useState<Report | null>(null);
+  const trackedReport = useMemo(() => {
+    if (!trackedReportState) return null;
+    return reports.find(r => r.id === trackedReportState.id) || trackedReportState;
+  }, [trackedReportState, reports]);
+  const setTrackedReport = (val: Report | null) => {
+    setTrackedReportState(val);
+  };
   const [trackError, setTrackError] = useState<string | null>(null);
   const [isTrackingLoading, setIsTrackingLoading] = useState<boolean>(false);
 
@@ -590,6 +597,46 @@ export default function App() {
       setIsTrackingLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleRefreshOnFocus = async () => {
+      // 1. Refresh general reports list
+      try {
+        const res = await fetch("/api/reports");
+        const data = await res.json();
+        setReports(data);
+      } catch (err) {
+        console.error("Error refreshing reports list:", err);
+      }
+
+      // 2. Refresh active tracked report (if any)
+      if (trackedReport?.id) {
+        try {
+          const res = await fetch(`/api/reports/${trackedReport.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setTrackedReport(data);
+          }
+        } catch (err) {
+          console.error("Error refreshing tracked report on focus:", err);
+        }
+      }
+    };
+    
+    window.addEventListener("focus", handleRefreshOnFocus);
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleRefreshOnFocus();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleRefreshOnFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [trackedReport?.id]);
 
   const handleDeleteReport = async (reportId: string) => {
     if (!window.confirm(uiLanguage === "mr" ? "तुम्हाला ही तक्रार खरोखर हटवायची आहे का?" : uiLanguage === "hi" ? "क्या आप वास्तव में इस शिकायत को हटाना चाहते हैं?" : "Are you sure you want to delete this report?")) return;
